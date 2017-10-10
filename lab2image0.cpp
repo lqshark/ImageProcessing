@@ -12,21 +12,21 @@ int main() {
   Mat image;
   //image = imread("mandrill0.jpg", CV_LOAD_IMAGE_UNCHANGED);
   image = imread("mandrill0.jpg", CV_LOAD_IMAGE_UNCHANGED);
-  newval[0] = image.at<cv::Vec3b>(0,0)[0];
-  newval[1] = image.at<cv::Vec3b>(0,0)[1];
-  newval[2] = image.at<cv::Vec3b>(0,0)[2];
+  // newval[0] = image.at<cv::Vec3b>(0,0)[0];
+  // newval[1] = image.at<cv::Vec3b>(0,0)[1];
+  // newval[2] = image.at<cv::Vec3b>(0,0)[2];
 
-for(int y = 0; y < image.rows; y++)
-  for (int x = 0; x <image.cols; x++) {
-    int temp = image.at<Vec3b>(y,x)[0];
-    image.at<Vec3b>(y,x)[0] = image.at<Vec3b>(y,x)[2];
-    image.at<Vec3b>(y,x)[2] = image.at<Vec3b>(y,x)[1];
-    image.at<Vec3b>(y,x)[1] = temp;
-
-  }
-  printf (" Value = %d \n", newval[0]);
-  printf (" Value = %d \n", newval[1]);
-  printf (" Value = %d \n", newval[2]);
+  // Swap the RGB values around 
+  for(int y = 0; y < image.rows; y++)
+    for (int x = 0; x <image.cols; x++) {
+      int temp = image.at<Vec3b>(y,x)[0];
+      image.at<Vec3b>(y,x)[0] = image.at<Vec3b>(y,x)[2];
+      image.at<Vec3b>(y,x)[2] = image.at<Vec3b>(y,x)[1];
+      image.at<Vec3b>(y,x)[1] = temp;
+    }
+  // printf (" Value = %d \n", newval[0]);
+  // printf (" Value = %d \n", newval[1]);
+  // printf (" Value = %d \n", newval[2]);
   namedWindow("Display window, CV_WINDOW_AUTOSIZE");
   imshow("DIsplay window", image);
   waitKey(0);
