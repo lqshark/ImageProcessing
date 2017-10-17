@@ -110,6 +110,16 @@ for(int i=0; i<gradient_f.rows; i++)
     }
 }
 
+*
+imshow("grad x",gradient_x);
+waitKey(0);
+
+
+imshow("grad y",gradient_y);
+waitKey(0);
+
+imshow("absolute grad magnitude",absGrad);
+waitKey(0);
 
 imshow("grad magnitude",gradient_f);
 waitKey(0);
