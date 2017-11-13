@@ -3,179 +3,92 @@
 #include <opencv/cv.h>        //you may need to
 #include <opencv/highgui.h>   //adjust import locations
 #include <opencv/cxcore.h>    //depending on your machine setup
+#include<iostream>
+#include<cmath>
+#include<opencv2/imgproc/imgproc.hpp>
+#include<opencv2/highgui/highgui.hpp>
 
+using namespace std;
 using namespace cv;
 
-void GaussianBlur(
-	cv::Mat &input,
-	int size,
-	cv::Mat &blurredOutput);
 
-int main(){
-
-  // read image
-  Mat image;
-  image = imread("coins1.png");
-
-  //convert to grayscale
-  Mat gray_image;
-  cvtColor( image, gray_image, CV_BGR2GRAY );
-
-  //Gaussian blur
-  Mat coinBlurred;
-  GaussianBlur(gray_image,23,coinBlurred);
-
-
-  int cols = gray_image.cols;
-  int rows = gray_image.rows;
-
-  // Sobel operator in x direction
-  int sobel_x[3][3] = {-1,0,1,-2,0,2,-1,0,1};
-  // Sobel operator in y direction
-  int sobel_y[3][3] = {-1,-2,-1,0,0,0,1,2,1};
-
-  int radius = 1;
-
-  // edges
-  Mat _src;
-  copyMakeBorder(gray_image, _src, radius, radius, radius, radius, BORDER_REFLECT101);
-
-  // Create output matrix
-  Mat gradient_x = gray_image.clone();
-  Mat gradient_y = gray_image.clone();
-  Mat gradient_f = gray_image.clone();
-
-  int max=0;
-
-  // Correlation loop in x direction
-
-// Iterate on image
-for (int r = radius; r < _src.rows - radius; ++r)
+// Computes the x component of the gradient vector
+// at a given point in a image.
+// returns gradient in the x direction
+int xGradient(Mat image, int x, int y)
 {
-    for (int c = radius; c < _src.cols - radius; ++c)
-    {
-        int s = 0;
+    return image.at<uchar>(y-1, x-1) +
+                2*image.at<uchar>(y, x-1) +
+                 image.at<uchar>(y+1, x-1) -
+                  image.at<uchar>(y-1, x+1) -
+                   2*image.at<uchar>(y, x+1) -
+                    image.at<uchar>(y+1, x+1);
+}
 
-        // Iterate on kernel
-        for (int i = -radius; i <= radius; ++i)
-        {
-            for (int j = -radius; j <= radius; ++j)
-            {
-                s += _src.at<uchar>(r + i, c + j) * sobel_x[i + radius][j + radius];
+// Computes the y component of the gradient vector
+// at a given point in a image
+// returns gradient in the y direction
+
+int yGradient(Mat image, int x, int y)
+{
+    return image.at<uchar>(y-1, x-1) +
+                2*image.at<uchar>(y-1, x) +
+                 image.at<uchar>(y-1, x+1) -
+                  image.at<uchar>(y+1, x-1) -
+                   2*image.at<uchar>(y+1, x) -
+                    image.at<uchar>(y+1, x+1);
+}
+
+int main()
+{
+
+      Mat src, dst;
+      int gx, gy, sum;
+
+      // Load an image
+      src = imread("coins1.png", CV_LOAD_IMAGE_GRAYSCALE);
+      dst = src.clone();
+      if( !src.data )
+      { return -1; }
+
+
+        for(int y = 0; y < src.rows; y++)
+            for(int x = 0; x < src.cols; x++)
+                dst.at<uchar>(y,x) = 0.0;
+
+        for(int y = 1; y < src.rows - 1; y++){
+            for(int x = 1; x < src.cols - 1; x++){
+                gx = xGradient(src, x, y);
+                gy = yGradient(src, x, y);
+                sum = abs(gx) + abs(gy);
+                sum = sum > 255 ? 255:sum;
+                sum = sum < 0 ? 0 : sum;
+                dst.at<uchar>(y,x) = sum;
             }
         }
-        gradient_x.at<uchar>(r - radius, c - radius) = s/30;
-    }
-}
 
-Mat absGrad_x;
-convertScaleAbs( gradient_x, absGrad_x );
+        namedWindow("final");
+        imshow("final", dst);
 
-// Conrrelation loop in y direction
+        namedWindow("initial");
+        imshow("initial", src);
 
-// Iterate on image
-for (int r = radius; r < _src.rows - radius; ++r)
-{
-    for (int c = radius; c < _src.cols - radius; ++c)
-    {
-        int s = 0;
-
-        // Iterate on kernel
-        for (int i = -radius; i <= radius; ++i)
-        {
-            for (int j = -radius; j <= radius; ++j)
-            {
-                s += _src.at<uchar>(r + i, c + j) * sobel_y[i + radius][j + radius];
-            }
-        }
-        gradient_y.at<uchar>(r - radius, c - radius) = s/30;
-    }
-}
-
-Mat absGrad_y;
-convertScaleAbs( gradient_y, absGrad_y );
-
-
-//Calculating gradient magnitude
-for(int i=0; i<gradient_f.rows; i++)
-{
-    for(int j=0; j<gradient_f.cols; j++)
-    {
-        gradient_f.at<uchar>(i,j) = sqrt( pow(gradient_x.at<uchar>(i,j),2) + pow(gradient_y.at<uchar>(i,j),2) );
-
-         if(gradient_f.at<uchar>(i,j) >240)
-            gradient_f.at<uchar>(i,j) = 100;
-        else
-            gradient_f.at<uchar>(i,j) = 0;
-    }
-}
-
-*
-imshow("grad x",gradient_x);
-waitKey(0);
-
-
-imshow("grad y",gradient_y);
-waitKey(0);
-
-imshow("absolute grad magnitude",absGrad);
-waitKey(0);
-
-imshow("grad magnitude",gradient_f);
-waitKey(0);
-}
-
-void GaussianBlur(cv::Mat &input, int size, cv::Mat &blurredOutput)
-{
-	// intialise the output using the input
-	blurredOutput.create(input.size(), input.type());
-
-	// create the Gaussian kernel in 1D
-	cv::Mat kX = cv::getGaussianKernel(size, -1);
-	cv::Mat kY = cv::getGaussianKernel(size, -1);
-
-	// make it 2D multiply one by the transpose of the other
-	cv::Mat kernel = kX * kY.t();
-
-	//CREATING A DIFFERENT IMAGE kernel WILL BE NEEDED
-	//TO PERFORM OPERATIONS OTHER THAN GUASSIAN BLUR!!!
-
-	// we need to create a padded version of the input
-	// or there will be border effects
-	int kernelRadiusX = ( kernel.size[0] - 1 ) / 2;
-	int kernelRadiusY = ( kernel.size[1] - 1 ) / 2;
-
-	cv::Mat paddedInput;
-	cv::copyMakeBorder( input, paddedInput,
-		kernelRadiusX, kernelRadiusX, kernelRadiusY, kernelRadiusY,
-		cv::BORDER_REPLICATE );
-
-	// now we can do the convoltion
-	for ( int i = 0; i < input.rows; i++ )
-	{
-		for( int j = 0; j < input.cols; j++ )
-		{
-			double sum = 0.0;
-			for( int m = -kernelRadiusX; m <= kernelRadiusX; m++ )
-			{
-				for( int n = -kernelRadiusY; n <= kernelRadiusY; n++ )
+				//Calculating gradient magnitude
+				for(int i=0; i<gradient_f.rows; i++)
 				{
-					// find the correct indices we are using
-					int imagex = i + m + kernelRadiusX;
-					int imagey = j + n + kernelRadiusY;
-					int kernelx = m + kernelRadiusX;
-					int kernely = n + kernelRadiusY;
+				    for(int j=0; j<gradient_f.cols; j++)
+				    {
+				        gradient_f.at<uchar>(i,j) = sqrt( pow(gradient_x.at<uchar>(i,j),2) + pow(gradient_y.at<uchar>(i,j),2) );
 
-					// get the values from the padded image and the kernel
-					int imageval = ( int ) paddedInput.at<uchar>( imagex, imagey );
-					double kernalval = kernel.at<double>( kernelx, kernely );
-
-					// do the multiplication
-					sum += imageval * kernalval;
+				         if(gradient_f.at<uchar>(i,j) >240)
+				            gradient_f.at<uchar>(i,j) = 100;
+				        else
+				            gradient_f.at<uchar>(i,j) = 0;
+				    }
 				}
-			}
-			// set the output value as the sum of the convolution
-			blurredOutput.at<uchar>(i, j) = (uchar) sum;
-		}
-	}
+
+      waitKey();
+
+
+    return 0;
 }
